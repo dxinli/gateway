@@ -1,0 +1,54 @@
+# This is a gateway config.
+name: helloworld
+version: v1
+middlewares:
+  - name: tracing
+    options:
+      '@type': type.googleapis.com/gateway.middleware.tracing.v1.Tracing
+      httpEndpoint: 'localhost:4318' # default opentelemetry collector port
+  - name: logging
+  - name: transcoder
+  - name: cors
+    options:
+      '@type': type.googleapis.com/gateway.middleware.cors.v1.Cors
+      allowCredentials: true
+      allowOrigins:
+        - .google.com
+      allowMethods:
+        - GET
+        - POST
+        - OPTIONS
+endpoints:
+  - path: /helloworld/*
+    timeout: 1s
+    protocol: HTTP
+    host: localhost
+    backends:
+#      - target: '127.0.0.1:8081'
+      - target: 'discovery:///db-sample-service'
+    middlewares:
+      - name: circuitbreaker
+        options:
+          '@type': type.googleapis.com/gateway.middleware.circuitbreaker.v1.CircuitBreaker
+          successRatio: {"success":0.6, "request":"1", "bucket":"10", "window":"3s"}
+          backupService: {"endpoint":{"backends":[{"target":"127.0.0.1:8001"}]}}
+          assertCondtions:
+          - {"by_status_code":"200"}
+      - name: rewrite
+        options:
+          '@type': type.googleapis.com/gateway.middleware.rewrite.v1.Rewrite
+#          stripPrefix: /bbs
+  - path: /helloworld.Greeter/*
+    method: POST
+    timeout: 1s
+    protocol: GRPC
+    backends:
+      - target: '127.0.0.1:9000'
+    retry:
+      attempts: 3
+      perTryTimeout: 0.1s
+      conditions:
+        - byStatusCode: '502-504'
+        - byHeader:
+            name: 'Grpc-Status'
+            value: '14'
