@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/go-kratos/gateway/proxy/auth"
+	"github.com/go-kratos/gateway/proxy/auth/authN"
 	"net/http"
 	"os"
 	"time"
@@ -23,6 +25,7 @@ import (
 	_ "github.com/go-kratos/gateway/middleware/bbr"
 	"github.com/go-kratos/gateway/middleware/circuitbreaker"
 	_ "github.com/go-kratos/gateway/middleware/cors"
+	_ "github.com/go-kratos/gateway/middleware/jwt"
 	_ "github.com/go-kratos/gateway/middleware/logging"
 	_ "github.com/go-kratos/gateway/middleware/rewrite"
 	_ "github.com/go-kratos/gateway/middleware/tracing"
@@ -156,6 +159,10 @@ func main() {
 		}
 		serverHandler = debug.MashupWithDebugHandler(p)
 	}
+	// 添加认证处理器
+	auth.Registry("/login", authN.LoginHandler)
+	auth.Registry("/reg", authN.RegHandler)
+	serverHandler = auth.Handler(serverHandler)
 	servers := make([]transport.Server, 0, len(proxyAddrs.Get()))
 	for _, addr := range proxyAddrs.Get() {
 		servers = append(servers, server.NewProxy(serverHandler, addr))

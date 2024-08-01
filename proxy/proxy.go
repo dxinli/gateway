@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-kratos/gateway/middleware/jwt"
+	"github.com/go-kratos/gateway/middleware/rbac"
 	"io"
 	"net"
 	"net/http"
@@ -95,6 +97,12 @@ func writeError(w http.ResponseWriter, r *http.Request, err error, labels middle
 		statusCode = 499
 	case errors.Is(err, context.DeadlineExceeded):
 		statusCode = 504
+	case errors.Is(err, jwt.NotAuthN):
+		log.Errorf("Failed for authN request: %s: %+v", r.URL.String(), err)
+		statusCode = http.StatusUnauthorized
+	case errors.Is(err, rbac.NotAuthZ):
+		log.Errorf("Failed for authZ request: %s: %+v", r.URL.String(), err)
+		statusCode = http.StatusForbidden
 	default:
 		log.Errorf("Failed to handle request: %s: %+v", r.URL.String(), err)
 		statusCode = 502
@@ -302,6 +310,9 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (_ ht
 			req.Body = io.NopCloser(reader)
 			resp, err = tripper.RoundTrip(req.Clone(tryCtx))
 			if err != nil {
+				if errors.Is(err, jwt.NotAuthN) || errors.Is(err, rbac.NotAuthZ) {
+					break
+				}
 				markFailed(req, i, err)
 				log.Errorf("Attempt at [%d/%d], failed to handle request: %s: %+v", i+1, retryStrategy.attempts, req.URL.String(), err)
 				continue

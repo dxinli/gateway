@@ -7,6 +7,8 @@ middlewares:
       '@type': type.googleapis.com/gateway.middleware.tracing.v1.Tracing
       httpEndpoint: 'localhost:4318' # default opentelemetry collector port
   - name: logging
+  - name: jwt
+  - name: rbac
   - name: transcoder
   - name: cors
     options:
