@@ -260,6 +260,9 @@ func MashupWithDebugHandler(origin http.Handler) http.Handler {
 3. executeLoader 通过调用回掉函数执行加载配置
 4. Load 加载配置文件中的配置，由回调函数调用
 
+#### CtrlConfigLoader
+从控制系统(配置中心)中加载配置
+
 ### 设计模式的使用
 1. 装饰器模式 
    - 中间件和客户端 func(http.RoundTripper) http.RoundTripper
